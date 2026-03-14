@@ -27,7 +27,6 @@ enum OrderStatus: String {
         switch apiStatus {
         case "delivered":   return .delivered
         case "in_transit":  return .inTransit
-        case "cancelled":   return .cancelled
         case "processing":  return .processing
         default:            return .processing
         }
