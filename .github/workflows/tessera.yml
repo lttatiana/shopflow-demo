@@ -1,0 +1,35 @@
+name: Tessera Visual QA
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  visual-qa:
+    name: Tessera
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Boot iOS Simulator
+        run: xcrun simctl boot "iPhone 16 Pro" 2>/dev/null || true
+
+      - name: Build ShopFlow
+        run: |
+          xcodebuild build \
+            -project ShopFlow.xcodeproj \
+            -scheme ShopFlow \
+            -configuration Debug \
+            -destination 'platform=iOS Simulator,name=iPhone 16 Pro' \
+            -derivedDataPath build/ \
+            2>&1 | tail -5
+
+      - name: Run Tessera
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          npx @anthropic/tessera test \
+            --config tessera.yml \
+            --data-aware \
+            --api-snapshot api-snapshots \
+            --ci
