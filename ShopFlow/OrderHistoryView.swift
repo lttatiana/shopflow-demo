@@ -22,6 +22,17 @@ enum OrderStatus: String {
     case inTransit = "In Transit"
     case cancelled = "Cancelled"
 
+    /// Maps an API status string to the display enum.
+    static func from(apiStatus: String) -> OrderStatus {
+        switch apiStatus {
+        case "delivered":   return .delivered
+        case "in_transit":  return .inTransit
+        case "cancelled":   return .cancelled
+        case "processing":  return .processing
+        default:            return .processing
+        }
+    }
+
     var color: Color {
         switch self {
         case .delivered:  return Color(red: 0.1, green: 0.48, blue: 0.1)
@@ -41,60 +52,58 @@ enum OrderStatus: String {
     }
 }
 
-// MARK: - Mock Data
+// MARK: - Data Layer
 
-let mockOrders: [Order] = [
-    Order(
-        id: "ORD-1003",
-        date: "February 1, 2026",
-        status: .inTransit,
-        items: [
-            OrderItem(emoji: "👟", name: "Nike Air Max 90"),
-            OrderItem(emoji: "🧦", name: "Athletic Crew Socks"),
-        ],
-        total: 149.00,
-        trackingAction: nil
-    ),
-    Order(
-        id: "ORD-1002",
-        date: "January 20, 2026",
-        status: .cancelled,
-        items: [
-            OrderItem(emoji: "🎧", name: "Sony WH-1000XM5"),
-        ],
-        total: 29.99,
-        trackingAction: nil
-    ),
-    Order(
-        id: "ORD-1001",
-        date: "January 15, 2026",
-        status: .delivered,
-        items: [
-            OrderItem(emoji: "👕", name: "Cotton T-Shirt"),
-            OrderItem(emoji: "👖", name: "Slim Fit Chinos"),
-            OrderItem(emoji: "🧢", name: "Baseball Cap"),
-        ],
-        total: 49.99,
-        trackingAction: "View Delivery Photos"
-    ),
-]
+/// Simulates decoded API responses. In production this would come from URLSession.
+struct OrderService {
+    static func fetchOrders() -> [Order] {
+        // Raw API response statuses
+        let apiOrders: [(id: String, date: String, apiStatus: String, items: [OrderItem], total: Double, trackingAction: String?)] = [
+            ("ORD-1003", "February 1, 2026", "in_transit", [
+                OrderItem(emoji: "👟", name: "Nike Air Max 90"),
+                OrderItem(emoji: "🧦", name: "Athletic Crew Socks"),
+            ], 149.00, nil),
+            ("ORD-1002", "January 20, 2026", "cancelled", [
+                OrderItem(emoji: "🎧", name: "Sony WH-1000XM5"),
+            ], 29.99, nil),
+            ("ORD-1001", "January 15, 2026", "delivered", [
+                OrderItem(emoji: "👕", name: "Cotton T-Shirt"),
+                OrderItem(emoji: "👖", name: "Slim Fit Chinos"),
+                OrderItem(emoji: "🧢", name: "Baseball Cap"),
+            ], 49.99, "View Delivery Photos"),
+        ]
+
+        return apiOrders.map { raw in
+            Order(
+                id: raw.id,
+                date: raw.date,
+                status: OrderStatus.from(apiStatus: raw.apiStatus),
+                items: raw.items,
+                total: raw.total,
+                trackingAction: raw.trackingAction
+            )
+        }
+    }
+}
 
 // MARK: - Views
 
 struct OrderHistoryView: View {
+    let orders = OrderService.fetchOrders()
+
     var body: some View {
         NavigationView {
             ScrollView {
                 LazyVStack(spacing: 0) {
                     SectionHeader(title: "RECENT")
 
-                    ForEach(mockOrders.prefix(2)) { order in
+                    ForEach(orders.prefix(2)) { order in
                         OrderCard(order: order)
                     }
 
                     SectionHeader(title: "JANUARY 2026")
 
-                    ForEach(mockOrders.suffix(1)) { order in
+                    ForEach(orders.suffix(1)) { order in
                         OrderCard(order: order)
                     }
                 }
