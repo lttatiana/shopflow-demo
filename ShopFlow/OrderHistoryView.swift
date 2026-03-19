@@ -22,32 +22,45 @@ enum OrderStatus: String {
     case inTransit = "In Transit"
     case cancelled = "Cancelled"
 
+    /// Bundles display metadata for a status value.
+    struct StatusMeta {
+        let icon: String
+        let color: Color
+        let bgColor: Color
+    }
+
+    /// Mapping from raw API status strings to display enum values.
+    private static let statusMapping: [String: OrderStatus] = [
+        "delivered":  .delivered,
+        "in_transit": .inTransit,
+        "processing": .processing,
+        "cancelled":  .processing,
+    ]
+
     /// Maps an API status string to the display enum.
     static func from(apiStatus: String) -> OrderStatus {
-        switch apiStatus {
-        case "delivered":   return .delivered
-        case "in_transit":  return .inTransit
-        case "cancelled":   return .cancelled
-        case "processing":  return .processing
-        default:            return .processing
-        }
+        statusMapping[apiStatus] ?? .processing
     }
 
-    var color: Color {
+    /// Consolidated display metadata per status.
+    var meta: StatusMeta {
         switch self {
-        case .delivered:  return Color(red: 0.1, green: 0.48, blue: 0.1)
-        case .processing: return Color(red: 0.0, green: 0.31, blue: 0.83)
-        case .inTransit:  return Color(red: 0.6, green: 0.4, blue: 0.0)
-        case .cancelled:  return Color(red: 0.8, green: 0.0, blue: 0.0)
-        }
-    }
-
-    var bgColor: Color {
-        switch self {
-        case .delivered:  return Color(red: 0.83, green: 0.96, blue: 0.83)
-        case .processing: return Color(red: 0.83, green: 0.89, blue: 1.0)
-        case .inTransit:  return Color(red: 1.0, green: 0.94, blue: 0.83)
-        case .cancelled:  return Color(red: 1.0, green: 0.83, blue: 0.83)
+        case .delivered:
+            return StatusMeta(icon: "checkmark.circle.fill",
+                              color: Color(red: 0.1, green: 0.48, blue: 0.1),
+                              bgColor: Color(red: 0.83, green: 0.96, blue: 0.83))
+        case .processing:
+            return StatusMeta(icon: "clock.fill",
+                              color: Color(red: 0.0, green: 0.31, blue: 0.83),
+                              bgColor: Color(red: 0.83, green: 0.89, blue: 1.0))
+        case .inTransit:
+            return StatusMeta(icon: "shippingbox.fill",
+                              color: Color(red: 0.6, green: 0.4, blue: 0.0),
+                              bgColor: Color(red: 1.0, green: 0.94, blue: 0.83))
+        case .cancelled:
+            return StatusMeta(icon: "xmark.circle.fill",
+                              color: Color(red: 0.8, green: 0.0, blue: 0.0),
+                              bgColor: Color(red: 1.0, green: 0.83, blue: 0.83))
         }
     }
 }
@@ -209,6 +222,25 @@ struct OrderCard: View {
                 .padding(.vertical, 10)
                 .background(Color(UIColor.systemGray6).opacity(0.5))
             }
+
+            // Refund info row for cancelled orders
+            if order.status == .cancelled {
+                Divider()
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.uturn.backward.circle.fill")
+                        .foregroundColor(.secondary)
+                    Text("Refund processed")
+                        .font(.system(size: 14))
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Text(String(format: "$%.2f", order.total))
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.secondary)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(Color(UIColor.systemGray6).opacity(0.3))
+            }
         }
         .background(Color.white)
         .cornerRadius(13)
@@ -220,13 +252,17 @@ struct StatusBadge: View {
     let status: OrderStatus
 
     var body: some View {
-        Text(status.rawValue)
-            .font(.system(size: 13, weight: .semibold))
-            .padding(.horizontal, 10)
-            .padding(.vertical, 4)
-            .background(status.bgColor)
-            .foregroundColor(status.color)
-            .cornerRadius(7)
+        HStack(spacing: 4) {
+            Image(systemName: status.meta.icon)
+                .font(.system(size: 11))
+            Text(status.rawValue)
+        }
+        .font(.system(size: 13, weight: .semibold))
+        .padding(.horizontal, 10)
+        .padding(.vertical, 4)
+        .background(status.meta.bgColor)
+        .foregroundColor(status.meta.color)
+        .cornerRadius(7)
     }
 }
 
